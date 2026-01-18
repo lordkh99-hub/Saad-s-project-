@@ -1,59 +1,68 @@
 import streamlit as st
 import os
 
-# ============== CONFIG ==============
+# ================= CONFIG =================
 APP_TITLE = "Efham sah"
-ACCESS_PASSWORD = "IECES"
-VIDEO_ROOT = "videos"
 
+ADMIN_PASSWORD = "ADMIN123"   # change this
+USER_PASSWORD  = "IECES"      # students
+
+VIDEO_ROOT = "videos"
 SECTIONS = ["IE352", "IE360", "IE314", "IE339"]
 
 st.set_page_config(page_title=APP_TITLE, layout="wide")
 
-# ============== SESSION ==============
-if "auth" not in st.session_state:
-    st.session_state.auth = False
+# ================= SESSION =================
+if "logged_in" not in st.session_state:
+    st.session_state.logged_in = False
+if "is_admin" not in st.session_state:
+    st.session_state.is_admin = False
 
-# ============== TITLE ==============
+# ================= TITLE =================
 st.title("🎓 Efham sah")
 st.caption("Educational video platform")
 
-# ============== LOGIN ==============
-if not st.session_state.auth:
-    st.subheader("🔐 Enter Access Password")
-    pw = st.text_input("Password", type="password")
+# ================= LOGIN =================
+if not st.session_state.logged_in:
+    st.subheader("🔐 Login")
+
+    password = st.text_input("Password", type="password")
 
     if st.button("Enter"):
-        if pw == ACCESS_PASSWORD:
-            st.session_state.auth = True
+        if password == ADMIN_PASSWORD:
+            st.session_state.logged_in = True
+            st.session_state.is_admin = True
+            st.rerun()
+        elif password == USER_PASSWORD:
+            st.session_state.logged_in = True
+            st.session_state.is_admin = False
             st.rerun()
         else:
-            st.error("Wrong password")
+            st.error("Incorrect password")
 
     st.stop()
 
-# ============== MAIN APP ==============
-st.success("Access granted")
-
-# Ensure folders exist
+# ================= SETUP =================
 os.makedirs(VIDEO_ROOT, exist_ok=True)
 for sec in SECTIONS:
     os.makedirs(os.path.join(VIDEO_ROOT, sec), exist_ok=True)
 
-# ============== LAYOUT ==============
+st.success("Access granted")
+
+# ================= LAYOUT =================
 left, center, right = st.columns([2, 5, 2])
 
 # ---------- LEFT: SECTIONS ----------
 with left:
     st.subheader("📚 Sections")
-    selected_section = st.radio("Choose a subject", SECTIONS)
+    selected_section = st.radio("Choose subject", SECTIONS)
 
 # ---------- CENTER: VIDEOS ----------
 with center:
     section_path = os.path.join(VIDEO_ROOT, selected_section)
     videos = [
-        f for f in os.listdir(section_path)
-        if f.lower().endswith((".mp4", ".mov", ".mkv"))
+        v for v in os.listdir(section_path)
+        if v.lower().endswith((".mp4", ".mov", ".mkv"))
     ]
 
     if not videos:
@@ -62,31 +71,31 @@ with center:
         selected_video = st.selectbox("🎬 Select lesson", videos)
         st.video(os.path.join(section_path, selected_video))
 
-# ---------- RIGHT: INFO + UPLOAD ----------
+# ---------- RIGHT: ADMIN ONLY ----------
 with right:
-    st.subheader("⬆️ Admin Upload")
-    uploaded = st.file_uploader(
-        f"Upload video to {selected_section}",
-        type=["mp4", "mov", "mkv"]
-    )
-
-    if uploaded:
-        save_path = os.path.join(section_path, uploaded.name)
-        with open(save_path, "wb") as f:
-            f.write(uploaded.getbuffer())
-        st.success("Video uploaded")
-        st.rerun()
-
-    st.divider()
     st.subheader("ℹ️ Info")
     st.write(f"Section: **{selected_section}**")
-    st.write("Password protected")
-    st.write("View-only access")
+    st.write("View-only for students")
 
-# ============== FOOTER ==============
+    if st.session_state.is_admin:
+        st.divider()
+        st.subheader("⬆️ Admin Upload")
+
+        uploaded = st.file_uploader(
+            f"Upload video to {selected_section}",
+            type=["mp4", "mov", "mkv"]
+        )
+
+        if uploaded:
+            save_path = os.path.join(section_path, uploaded.name)
+            with open(save_path, "wb") as f:
+                f.write(uploaded.getbuffer())
+            st.success("Video uploaded")
+            st.rerun()
+
+# ================= FOOTER =================
 st.markdown(
     "<div style='position:fixed; bottom:10px; left:20px; font-size:12px; color:gray;'>"
     "Built by <strong>Saad Alshafi</strong></div>",
     unsafe_allow_html=True
 )
-
